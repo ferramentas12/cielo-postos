@@ -179,7 +179,7 @@ function renderDias(p){
   c.innerHTML='';
   const isDoisTurnos=DOIS_TURNOS.includes(p);
   // PHAB sempre 1 dia
-  const modoEfetivo = isDoisTurnos ? 1 : modo;
+  const modoEfetivo = modo;
 
   for(let i=0;i<modoEfetivo;i++){
     const l=modoEfetivo===3?LABELS3[i]:'Dia';
@@ -247,7 +247,7 @@ async function processar(){
 
       const aba=document.getElementById('aba-'+p).value;
       const isDoisTurnos=DOIS_TURNOS.includes(p);
-      const modoEfetivo=isDoisTurnos?1:modo;
+      const modoEfetivo=modo;
       const dias=[];
 
       for(let i=0;i<modoEfetivo;i++){
