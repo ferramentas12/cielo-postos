@@ -17,8 +17,8 @@ header p{font-size:0.78rem;color:var(--text3);margin-top:4px;font-family:'IBM Pl
 .tab-btn{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:600;padding:6px 14px;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg3);color:var(--text3);}
 .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;font-weight:600;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
-.posto-tabs{display:flex;border-bottom:1px solid var(--border);}
-.posto-tab{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;font-weight:600;padding:10px 20px;border:none;cursor:pointer;background:transparent;color:var(--text3);border-bottom:2px solid transparent;}
+.posto-tabs{display:flex;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.posto-tab{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;font-weight:600;padding:10px 18px;border:none;cursor:pointer;background:transparent;color:var(--text3);border-bottom:2px solid transparent;}
 .posto-tab.active{color:var(--accent2);border-bottom-color:var(--accent2);background:var(--bg2);}
 .posto-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;padding:16px;}
 .posto-panel.active{display:block;}
@@ -35,6 +35,7 @@ header p{font-size:0.78rem;color:var(--text3);margin-top:4px;font-family:'IBM Pl
 .dia-num input{width:55px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:4px 7px;outline:none;}
 .dia-body{padding:10px 14px;}
 .grid-4{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;}
 .field label{display:block;font-size:0.68rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:4px;}
 .field input[type=time],.field input[type=number]{background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:5px 8px;width:100%;outline:none;}
 .time-row{display:flex;align-items:center;gap:4px;}
@@ -63,6 +64,7 @@ button{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;font-weight:600;p
 hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .instrucoes{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:1.5rem;font-size:0.72rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;line-height:1.8;}
 .instrucoes strong{color:var(--text2);}
+.info-tag{display:inline-block;font-size:0.6rem;font-family:'IBM Plex Mono',monospace;padding:2px 6px;border-radius:4px;background:#1a2a1a;color:var(--green);margin-left:6px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -70,14 +72,14 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
 <header>
   <div>
-    <h1>⛽ Conferência Cielo — 3 Postos</h1>
+    <h1>⛽ Conferência Cielo — Postos</h1>
     <p>Calcula turnos e preenche a planilha mensal com formatação preservada</p>
   </div>
   <div>
     <div style="font-size:0.68rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;">MODO</div>
     <div class="modo-tabs">
-      <button class="tab-btn active" onclick="setModo(1,this)">1 DIA</button>
-      <button class="tab-btn" onclick="setModo(3,this)">3 DIAS (SEG)</button>
+      <button class="tab-btn active" id="btn-modo-1" onclick="setModo(1,this)">1 DIA</button>
+      <button class="tab-btn" id="btn-modo-3" onclick="setModo(3,this)">3 DIAS (SEG)</button>
     </div>
   </div>
 </header>
@@ -88,14 +90,36 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <button class="posto-tab active" onclick="setPosto(0,this)">⛽ VILAS</button>
     <button class="posto-tab" onclick="setPosto(1,this)">⛽ CENTRO</button>
     <button class="posto-tab" onclick="setPosto(2,this)">⛽ BURAQUINHO</button>
+    <button class="posto-tab" onclick="setPosto(3,this)">⛽ PHAB <span class="info-tag">2 turnos</span></button>
   </div>
 
-  <!-- Painéis dos postos -->
-  <div id="panel-0" class="posto-panel active"><div class="posto-aba"><label>Aba:</label><select id="aba-0"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div><div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-0"><span class="icon">📊</span><span class="fname" id="fn-m-0">Selecionar planilha do Vilas...</span><input type="file" accept=".xlsx" onchange="setF(this,0,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-0"><span class="icon">💳</span><span class="fname" id="fn-c-0">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,0,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-0"><span class="icon">📱</span><span class="fname" id="fn-p-0">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,0,2)"></label></div></div></div><div id="dias-0"></div></div>
+  <!-- VILAS -->
+  <div id="panel-0" class="posto-panel active">
+    <div class="posto-aba"><label>Aba:</label><select id="aba-0"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div>
+    <div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-0"><span class="icon">📊</span><span class="fname" id="fn-m-0">Selecionar planilha do Vilas...</span><input type="file" accept=".xlsx" onchange="setF(this,0,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-0"><span class="icon">💳</span><span class="fname" id="fn-c-0">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,0,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-0"><span class="icon">📱</span><span class="fname" id="fn-p-0">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,0,2)"></label></div></div></div>
+    <div id="dias-0"></div>
+  </div>
 
-  <div id="panel-1" class="posto-panel"><div class="posto-aba"><label>Aba:</label><select id="aba-1"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div><div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-1"><span class="icon">📊</span><span class="fname" id="fn-m-1">Selecionar planilha do Centro...</span><input type="file" accept=".xlsx" onchange="setF(this,1,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-1"><span class="icon">💳</span><span class="fname" id="fn-c-1">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,1,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-1"><span class="icon">📱</span><span class="fname" id="fn-p-1">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,1,2)"></label></div></div></div><div id="dias-1"></div></div>
+  <!-- CENTRO -->
+  <div id="panel-1" class="posto-panel">
+    <div class="posto-aba"><label>Aba:</label><select id="aba-1"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div>
+    <div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-1"><span class="icon">📊</span><span class="fname" id="fn-m-1">Selecionar planilha do Centro...</span><input type="file" accept=".xlsx" onchange="setF(this,1,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-1"><span class="icon">💳</span><span class="fname" id="fn-c-1">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,1,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-1"><span class="icon">📱</span><span class="fname" id="fn-p-1">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,1,2)"></label></div></div></div>
+    <div id="dias-1"></div>
+  </div>
 
-  <div id="panel-2" class="posto-panel"><div class="posto-aba"><label>Aba:</label><select id="aba-2"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div><div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-2"><span class="icon">📊</span><span class="fname" id="fn-m-2">Selecionar planilha do Buraquinho...</span><input type="file" accept=".xlsx" onchange="setF(this,2,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-2"><span class="icon">💳</span><span class="fname" id="fn-c-2">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,2,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-2"><span class="icon">📱</span><span class="fname" id="fn-p-2">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,2,2)"></label></div></div></div><div id="dias-2"></div></div>
+  <!-- BURAQUINHO -->
+  <div id="panel-2" class="posto-panel">
+    <div class="posto-aba"><label>Aba:</label><select id="aba-2"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option><option>JANEIRO26</option><option>FEVEREIRO26</option><option>MARÇO26</option><option>ABRIL26</option><option selected>MAIO26</option><option>JUNHO26</option></select></div>
+    <div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-2"><span class="icon">📊</span><span class="fname" id="fn-m-2">Selecionar planilha do Buraquinho...</span><input type="file" accept=".xlsx" onchange="setF(this,2,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-2"><span class="icon">💳</span><span class="fname" id="fn-c-2">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,2,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-2"><span class="icon">📱</span><span class="fname" id="fn-p-2">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,2,2)"></label></div></div></div>
+    <div id="dias-2"></div>
+  </div>
+
+  <!-- PHAB -->
+  <div id="panel-3" class="posto-panel">
+    <div class="posto-aba"><label>Aba:</label><select id="aba-3"><option>JANEIRO 2026</option><option>FEVEREIRO 2026</option><option>MARCO 2026</option><option>ABRIL 2026</option><option selected>MAIO 2026</option><option>JUNHO 2026</option><option>JULHO 2026</option><option>AGOSTO 2026</option><option>SETEMBRO 2026</option><option>OUTUBRO 2026</option><option>NOVEMBRO 2026</option><option>DEZEMBRO 2026</option></select></div>
+    <div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do PHAB</label><label class="upload-box" id="box-m-3"><span class="icon">📊</span><span class="fname" id="fn-m-3">Selecionar planilha do PHAB...</span><input type="file" accept=".xlsx" onchange="setF(this,3,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-3"><span class="icon">💳</span><span class="fname" id="fn-c-3">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,3,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-3"><span class="icon">📱</span><span class="fname" id="fn-p-3">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,3,2)"></label></div></div></div>
+    <div id="dias-3"></div>
+  </div>
 </div>
 
 <hr>
@@ -112,29 +136,100 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
 <div class="instrucoes">
   <strong>Como usar:</strong><br>
-  · Escolha <strong>1 DIA</strong> ou <strong>3 DIAS (SEG)</strong><br>
-  · Para cada posto: suba a planilha mensal, cartões e Pix — pode ser um arquivo com vários dias juntos<br>
-  · Ajuste os horários dos turnos de cada dia conforme o Posto Gestor<br>
-  · Clique <strong>Calcular e preencher planilhas</strong> — baixa automaticamente com formatação preservada
+  · Escolha <strong>1 DIA</strong> ou <strong>3 DIAS (SEG)</strong> — o PHAB sempre usa 1 DIA<br>
+  · Clique na aba do posto, suba os arquivos e ajuste os horários dos turnos<br>
+  · Clique <strong>Calcular e preencher planilhas</strong> — baixa automaticamente com formatação preservada<br>
+  · <strong>PHAB:</strong> só tem Turno 1 e Turno 2, sem T3 anterior nem Turno 3
 </div>
 
 </div>
+
 <script>
-const NOMES=['VILAS','CENTRO','BURAQUINHO'];
+const NOMES=['VILAS','CENTRO','BURAQUINHO','PHAB'];
 const LABELS3=['Sexta-feira','Sábado','Domingo'];
+const DOIS_TURNOS=[3]; // índices de postos com só 2 turnos
 let modo=1;
-let arqs=[[null,null,null],[null,null,null],[null,null,null]];
+let arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
 
-function setModo(n,btn){modo=n;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');[0,1,2].forEach(renderDias);}
-function setPosto(i,btn){document.querySelectorAll('.posto-tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.posto-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('panel-'+i).classList.add('active');}
-function setF(input,p,t){const ids=[['fn-m-','box-m-'],['fn-c-','box-c-'],['fn-p-','box-p-']];if(input.files[0]){arqs[p][t]=input.files[0];document.getElementById(ids[t][0]+p).textContent=input.files[0].name;document.getElementById(ids[t][1]+p).classList.add('ok');}}
+function setModo(n,btn){
+  modo=n;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  [0,1,2,3].forEach(renderDias);
+}
+
+function setPosto(i,btn){
+  document.querySelectorAll('.posto-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.posto-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+i).classList.add('active');
+}
+
+function setF(input,p,t){
+  const ids=[['fn-m-','box-m-'],['fn-c-','box-c-'],['fn-p-','box-p-']];
+  if(input.files[0]){
+    arqs[p][t]=input.files[0];
+    document.getElementById(ids[t][0]+p).textContent=input.files[0].name;
+    document.getElementById(ids[t][1]+p).classList.add('ok');
+  }
+}
 
 function renderDias(p){
-  const c=document.getElementById('dias-'+p);c.innerHTML='';
-  for(let i=0;i<modo;i++){
-    const l=modo===3?LABELS3[i]:'Dia';const d=i===0?13:i===1?14:15;const pid=p+'-'+i;
-    c.innerHTML+=`<div class="dia-block"><div class="dia-header"><span class="dia-titulo">📅 Horários — ${l}</span><div class="dia-num"><label>Dia do mês:</label><input type="number" id="dia-${pid}" min="1" max="31" value="${d}"></div></div><div class="dia-body"><div class="grid-4"><div class="field"><label>T3 anterior — fechou às</label><input type="time" id="t3af-${pid}" value="05:55"></div><div class="field"><label>Turno 1</label><div class="time-row"><input type="time" id="t1i-${pid}" value="05:57"><span>até</span><input type="time" id="t1f-${pid}" value="13:55"></div></div><div class="field"><label>Turno 2</label><div class="time-row"><input type="time" id="t2i-${pid}" value="13:58"><span>até</span><input type="time" id="t2f-${pid}" value="21:53"></div></div><div class="field"><label>Turno 3 — abre às</label><input type="time" id="t3i-${pid}" value="22:00"></div></div></div></div>`;
+  const c=document.getElementById('dias-'+p);
+  c.innerHTML='';
+  const isDoisTurnos=DOIS_TURNOS.includes(p);
+  // PHAB sempre 1 dia
+  const modoEfetivo = isDoisTurnos ? 1 : modo;
+
+  for(let i=0;i<modoEfetivo;i++){
+    const l=modoEfetivo===3?LABELS3[i]:'Dia';
+    const d=i===0?13:i===1?14:15;
+    const pid=p+'-'+i;
+
+    let turnosHtml;
+    if(isDoisTurnos){
+      turnosHtml=`<div class="grid-2">
+        <div class="field"><label>Turno 1</label><div class="time-row"><input type="time" id="t1i-${pid}" value="06:00"><span>até</span><input type="time" id="t1f-${pid}" value="14:00"></div></div>
+        <div class="field"><label>Turno 2</label><div class="time-row"><input type="time" id="t2i-${pid}" value="14:00"><span>até</span><input type="time" id="t2f-${pid}" value="22:00"></div></div>
+      </div>`;
+    } else {
+      turnosHtml=`<div class="grid-4">
+        <div class="field"><label>T3 anterior — fechou às</label><input type="time" id="t3af-${pid}" value="05:55"></div>
+        <div class="field"><label>Turno 1</label><div class="time-row"><input type="time" id="t1i-${pid}" value="05:57"><span>até</span><input type="time" id="t1f-${pid}" value="13:55"></div></div>
+        <div class="field"><label>Turno 2</label><div class="time-row"><input type="time" id="t2i-${pid}" value="13:58"><span>até</span><input type="time" id="t2f-${pid}" value="21:53"></div></div>
+        <div class="field"><label>Turno 3 — abre às</label><input type="time" id="t3i-${pid}" value="22:00"></div>
+      </div>`;
+    }
+
+    c.innerHTML+=`<div class="dia-block">
+      <div class="dia-header">
+        <span class="dia-titulo">📅 Horários — ${l}</span>
+        <div class="dia-num"><label>Dia do mês:</label><input type="number" id="dia-${pid}" min="1" max="31" value="${d}"></div>
+      </div>
+      <div class="dia-body">${turnosHtml}</div>
+    </div>`;
   }
+}
+
+function getTurnos(p, i){
+  const pid=p+'-'+i;
+  const isDoisTurnos=DOIS_TURNOS.includes(p);
+  if(isDoisTurnos){
+    return {
+      t1i:document.getElementById('t1i-'+pid).value,
+      t1f:document.getElementById('t1f-'+pid).value,
+      t2i:document.getElementById('t2i-'+pid).value,
+      t2f:document.getElementById('t2f-'+pid).value,
+    };
+  }
+  return {
+    t3af:document.getElementById('t3af-'+pid).value,
+    t1i:document.getElementById('t1i-'+pid).value,
+    t1f:document.getElementById('t1f-'+pid).value,
+    t2i:document.getElementById('t2i-'+pid).value,
+    t2f:document.getElementById('t2f-'+pid).value,
+    t3i:document.getElementById('t3i-'+pid).value,
+  };
 }
 
 async function processar(){
@@ -143,48 +238,76 @@ async function processar(){
   document.getElementById('resultado-conteudo').innerHTML='';
   document.getElementById('loading').style.display='block';
   let algum=false;
+
   try{
-    for(let p=0;p<3;p++){
+    for(let p=0;p<4;p++){
       const[fM,fC,fP]=arqs[p];
       if(!fC&&!fP)continue;
       algum=true;
+
       const aba=document.getElementById('aba-'+p).value;
+      const isDoisTurnos=DOIS_TURNOS.includes(p);
+      const modoEfetivo=isDoisTurnos?1:modo;
       const dias=[];
-      for(let i=0;i<modo;i++){
+
+      for(let i=0;i<modoEfetivo;i++){
         const pid=p+'-'+i;
-        dias.push({dia:parseInt(document.getElementById('dia-'+pid).value),turnos:{t3af:document.getElementById('t3af-'+pid).value,t1i:document.getElementById('t1i-'+pid).value,t1f:document.getElementById('t1f-'+pid).value,t2i:document.getElementById('t2i-'+pid).value,t2f:document.getElementById('t2f-'+pid).value,t3i:document.getElementById('t3i-'+pid).value}});
+        dias.push({
+          dia:parseInt(document.getElementById('dia-'+pid).value),
+          turnos:getTurnos(p,i)
+        });
       }
+
       const fd=new FormData();
       if(fM)fd.append('planilha',fM);
       if(fC)fd.append('cartoes',fC);
       if(fP)fd.append('pix',fP);
-      fd.append('dados',JSON.stringify({posto:NOMES[p],aba,dias,modo}));
+      fd.append('dados',JSON.stringify({posto:NOMES[p],aba,dias,modo:modoEfetivo}));
+
       const r=await fetch('/preencher',{method:'POST',body:fd});
       if(r.ok){
-        const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=NOMES[p]+'_'+aba+'_atualizado.xlsx';a.click();URL.revokeObjectURL(url);
+        const blob=await r.blob();
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;a.download=NOMES[p]+'_'+aba+'_atualizado.xlsx';
+        a.click();URL.revokeObjectURL(url);
         document.getElementById('resultado-conteudo').innerHTML+=`<div class="result-section"><div class="result-posto-title">✓ ${NOMES[p]} — ${aba} — planilha baixada!</div></div>`;
       } else {
-        const e=await r.json();mostrarErro('Erro no '+NOMES[p]+': '+(e.erro||'desconhecido'));
+        const e=await r.json();
+        mostrarErro('Erro no '+NOMES[p]+': '+(e.erro||'desconhecido'));
       }
     }
+
     document.getElementById('loading').style.display='none';
     if(!algum){mostrarErro('Suba pelo menos um arquivo da Cielo.');return;}
-    const s=document.getElementById('success');s.textContent='✓ Concluído! Verifique os downloads.';s.style.display='block';
-  }catch(e){mostrarErro('Erro: '+e.message);document.getElementById('loading').style.display='none';}
+    const s=document.getElementById('success');
+    s.textContent='✓ Concluído! Verifique os downloads.';
+    s.style.display='block';
+
+  }catch(e){
+    mostrarErro('Erro: '+e.message);
+    document.getElementById('loading').style.display='none';
+  }
 }
 
 function limpar(){
   document.querySelectorAll('.upload-box input[type=file]').forEach(i=>i.value='');
   document.querySelectorAll('.upload-box').forEach(b=>b.classList.remove('ok'));
-  arqs=[[null,null,null],[null,null,null],[null,null,null]];
-  ['fn-m-0','fn-m-1','fn-m-2'].forEach((id,i)=>document.getElementById(id).textContent='Selecionar planilha do '+['Vilas','Centro','Buraquinho'][i]+'...');
-  document.querySelectorAll('[id^="fn-c-"],[id^="fn-p-"]').forEach(el=>{el.textContent=el.id.startsWith('fn-c')?'Selecionar .xlsx de cartões...':'Selecionar .xlsx de Pix...';});
-  document.getElementById('erro').style.display='none';document.getElementById('success').style.display='none';document.getElementById('resultado-conteudo').innerHTML='';
+  [0,1,2,3].forEach(p=>{
+    const nomes=['Vilas','Centro','Buraquinho','PHAB'];
+    document.getElementById('fn-m-'+p).textContent='Selecionar planilha do '+nomes[p]+'...';
+    document.getElementById('fn-c-'+p).textContent='Selecionar .xlsx de cartões...';
+    document.getElementById('fn-p-'+p).textContent='Selecionar .xlsx de Pix...';
+  });
+  arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
+  document.getElementById('erro').style.display='none';
+  document.getElementById('success').style.display='none';
+  document.getElementById('resultado-conteudo').innerHTML='';
 }
 
 function mostrarErro(m){const e=document.getElementById('erro');e.textContent=m;e.style.display='block';}
 
-[0,1,2].forEach(renderDias);
+[0,1,2,3].forEach(renderDias);
 </script>
 </body>
 </html>
