@@ -92,7 +92,7 @@ def classifica_turno(min_val, turnos_config, t3af=None, t1i=None, t1f=None, t2i=
 def map_bandeira(band, forma):
     b = band.lower()
     f = (forma or '').lower()
-    is_d = 'debit' in f or 'debito' in f
+    is_d = 'débit' in f or 'debito' in f or 'débito' in f or 'debit' in f
     if 'visa' in b: return 'VISA DEBITO' if is_d else 'VISA CREDITO'
     if 'master' in b: return 'MASTER DEBITO' if is_d else 'MASTER CREDITO'
     if 'elo' in b: return 'ELO DEBITO' if is_d else 'ELO CREDITO'
