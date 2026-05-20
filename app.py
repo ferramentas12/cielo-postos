@@ -35,8 +35,8 @@ POSTO_CONFIGS = {
         'row_bruto': 7, 'row_liq': 8,
     },
     'ALADAH': {
-        'col_map': {'AMEX':2,'HIPER':3,'MASTER CREDITO':4,'MASTER DEBITO':5,'VISA CREDITO':6,'VISA DEBITO':7,'ELO CREDITO':8,'ELO DEBITO':9,'PIX':11},
-        'taxas': {2:0.0210,3:0.0249,4:0.0185,5:0.0078,6:0.0173,7:0.0078,8:0.0142,9:0.0082,11:0.0074},
+        'col_map': {'AMEX':2,'MASTER CREDITO':3,'MASTER DEBITO':4,'VISA CREDITO':5,'VISA DEBITO':6,'ELO CREDITO':7,'ELO DEBITO':8,'PIX':10},
+        'taxas': {2:0.0210,3:0.0185,4:0.0078,5:0.0173,6:0.0078,7:0.0142,8:0.0082,10:0.0074},
         'turnos': ['TURNO 1','TURNO 2'],
         'turno_offset': {'TURNO 1':3,'TURNO 2':4},
         'linhas_por_dia': 9,
@@ -206,12 +206,7 @@ def preencher():
         processar_arquivo(cartoes, 'cartoes')
         processar_arquivo(pix, 'pix')
 
-        planilha_bytes = planilha.read()
-        import io as _io
-        # Ler planilha original para saber quais células tinham 0
-        wb_ref = openpyxl.load_workbook(_io.BytesIO(planilha_bytes), data_only=True)
-        ws_ref = wb_ref[aba] if aba in wb_ref.sheetnames else None
-        wb = openpyxl.load_workbook(_io.BytesIO(planilha_bytes))
+        wb = openpyxl.load_workbook(planilha)
         if aba not in wb.sheetnames:
             return jsonify({'erro': f'Aba "{aba}" nao encontrada. Abas disponiveis: {", ".join(wb.sheetnames)}'}), 400
         ws = wb[aba]
@@ -222,16 +217,13 @@ def preencher():
                 if turno not in turno_offset:
                     continue
                 row = base + turno_offset[turno]
+                # Zerar todas as colunas primeiro para não manter valores antigos
+                for col_idx in col_map.values():
+                    ws.cell(row=row, column=col_idx).value = 0
+                # Preencher com valores calculados
                 for col_name, valor in colunas.items():
-                    col_idx = col_map[col_name]
-                    cell = ws.cell(row=row, column=col_idx)
                     if valor > 0:
-                        cell.value = round(valor, 2)
-                    else:
-                        # Se a célula original tinha 0, manter 0 para preservar estrutura
-                        ref_val = ws_ref.cell(row=row, column=col_idx).value if ws_ref else None
-                        if ref_val == 0:
-                            cell.value = 0
+                        ws.cell(row=row, column=col_map[col_name]).value = round(valor, 2)
 
         for d in range(1, 32):
             base_d = (d - 1) * linhas_por_dia
