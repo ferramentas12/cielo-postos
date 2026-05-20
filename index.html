@@ -91,6 +91,7 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <button class="posto-tab" onclick="setPosto(1,this)">⛽ CENTRO</button>
     <button class="posto-tab" onclick="setPosto(2,this)">⛽ BURAQUINHO</button>
     <button class="posto-tab" onclick="setPosto(3,this)">⛽ PHAB <span class="info-tag">2 turnos</span></button>
+    <button class="posto-tab" onclick="setPosto(4,this)">⛽ ALADAH <span class="info-tag">2 turnos</span></button>
   </div>
 
   <!-- VILAS -->
@@ -122,6 +123,12 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
   </div>
 </div>
 
+  <!-- ALADAH -->
+  <div id="panel-4" class="posto-panel">
+    <div class="posto-aba"><label>Aba:</label><select id="aba-4"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option selected>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select></div>
+    <div class="files-box"><div style="font-size:0.7rem;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">ARQUIVOS — pode subir com todos os dias juntos</div><div class="files-grid"><div class="field"><div class="badge badge-orange">PLANILHA MENSAL</div><label>Arquivo do posto</label><label class="upload-box" id="box-m-4"><span class="icon">📊</span><span class="fname" id="fn-m-4">Selecionar planilha do ALADAH...</span><input type="file" accept=".xlsx" onchange="setF(this,4,0)"></label></div><div class="field"><div class="badge badge-blue">CARTÕES</div><label>Crédito + Débito</label><label class="upload-box" id="box-c-4"><span class="icon">💳</span><span class="fname" id="fn-c-4">Selecionar .xlsx de cartões...</span><input type="file" accept=".xlsx" onchange="setF(this,4,1)"></label></div><div class="field"><div class="badge badge-purple">PIX</div><label>Arquivo Pix</label><label class="upload-box" id="box-p-4"><span class="icon">📱</span><span class="fname" id="fn-p-4">Selecionar .xlsx de Pix...</span><input type="file" accept=".xlsx" onchange="setF(this,4,2)"></label></div></div></div>
+    <div id="dias-4"></div>
+  </div>
 <hr>
 
 <div class="btn-row">
@@ -145,17 +152,17 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
 </div>
 
 <script>
-const NOMES=['VILAS','CENTRO','BURAQUINHO','PHAB'];
+const NOMES=['VILAS','CENTRO','BURAQUINHO','PHAB','ALADAH'];
 const LABELS3=['Sexta-feira','Sábado','Domingo'];
-const DOIS_TURNOS=[3]; // índices de postos com só 2 turnos
+const DOIS_TURNOS=[3,4]; // índices de postos com só 2 turnos
 let modo=1;
-let arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
+let arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
 
 function setModo(n,btn){
   modo=n;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  [0,1,2,3].forEach(renderDias);
+  [0,1,2,3,4].forEach(renderDias);
 }
 
 function setPosto(i,btn){
@@ -240,7 +247,7 @@ async function processar(){
   let algum=false;
 
   try{
-    for(let p=0;p<4;p++){
+    for(let p=0;p<5;p++){
       const[fM,fC,fP]=arqs[p];
       if(!fC&&!fP)continue;
       algum=true;
@@ -293,8 +300,8 @@ async function processar(){
 function limpar(){
   document.querySelectorAll('.upload-box input[type=file]').forEach(i=>i.value='');
   document.querySelectorAll('.upload-box').forEach(b=>b.classList.remove('ok'));
-  [0,1,2,3].forEach(p=>{
-    const nomes=['Vilas','Centro','Buraquinho','PHAB'];
+  [0,1,2,3,4].forEach(p=>{
+    const nomes=['Vilas','Centro','Buraquinho','PHAB','ALADAH'];
     document.getElementById('fn-m-'+p).textContent='Selecionar planilha do '+nomes[p]+'...';
     document.getElementById('fn-c-'+p).textContent='Selecionar .xlsx de cartões...';
     document.getElementById('fn-p-'+p).textContent='Selecionar .xlsx de Pix...';
@@ -307,7 +314,7 @@ function limpar(){
 
 function mostrarErro(m){const e=document.getElementById('erro');e.textContent=m;e.style.display='block';}
 
-[0,1,2,3].forEach(renderDias);
+[0,1,2,3,4].forEach(renderDias);
 </script>
 </body>
 </html>
