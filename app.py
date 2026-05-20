@@ -217,6 +217,10 @@ def preencher():
                 if turno not in turno_offset:
                     continue
                 row = base + turno_offset[turno]
+                # Inicializar todas as colunas com 0 para preservar estrutura
+                for col_name, col_idx in col_map.items():
+                    if ws.cell(row=row, column=col_idx).value is None:
+                        ws.cell(row=row, column=col_idx).value = 0
                 for col_name, valor in colunas.items():
                     if valor > 0:
                         ws.cell(row=row, column=col_map[col_name]).value = round(valor, 2)
