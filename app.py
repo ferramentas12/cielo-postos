@@ -206,7 +206,12 @@ def preencher():
         processar_arquivo(cartoes, 'cartoes')
         processar_arquivo(pix, 'pix')
 
-        wb = openpyxl.load_workbook(planilha)
+        planilha_bytes = planilha.read()
+        import io as _io
+        # Ler planilha original para saber quais células tinham 0
+        wb_ref = openpyxl.load_workbook(_io.BytesIO(planilha_bytes), data_only=True)
+        ws_ref = wb_ref[aba] if aba in wb_ref.sheetnames else None
+        wb = openpyxl.load_workbook(_io.BytesIO(planilha_bytes))
         if aba not in wb.sheetnames:
             return jsonify({'erro': f'Aba "{aba}" nao encontrada. Abas disponiveis: {", ".join(wb.sheetnames)}'}), 400
         ws = wb[aba]
@@ -217,13 +222,16 @@ def preencher():
                 if turno not in turno_offset:
                     continue
                 row = base + turno_offset[turno]
-                # Inicializar todas as colunas com 0 para preservar estrutura
-                for col_name, col_idx in col_map.items():
-                    if ws.cell(row=row, column=col_idx).value is None:
-                        ws.cell(row=row, column=col_idx).value = 0
                 for col_name, valor in colunas.items():
+                    col_idx = col_map[col_name]
+                    cell = ws.cell(row=row, column=col_idx)
                     if valor > 0:
-                        ws.cell(row=row, column=col_map[col_name]).value = round(valor, 2)
+                        cell.value = round(valor, 2)
+                    else:
+                        # Se a célula original tinha 0, manter 0 para preservar estrutura
+                        ref_val = ws_ref.cell(row=row, column=col_idx).value if ws_ref else None
+                        if ref_val == 0:
+                            cell.value = 0
 
         for d in range(1, 32):
             base_d = (d - 1) * linhas_por_dia
