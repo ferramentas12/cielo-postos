@@ -34,6 +34,14 @@ POSTO_CONFIGS = {
         'linhas_por_dia': 11,
         'row_bruto': 7, 'row_liq': 8,
     },
+    'ALADAH': {
+        'col_map': {'AMEX':2,'HIPER':3,'MASTER CREDITO':4,'MASTER DEBITO':5,'VISA CREDITO':6,'VISA DEBITO':7,'ELO CREDITO':8,'ELO DEBITO':9,'PIX':11},
+        'taxas': {2:0.0210,3:0.0249,4:0.0185,5:0.0078,6:0.0173,7:0.0078,8:0.0142,9:0.0082,11:0.0074},
+        'turnos': ['TURNO 1','TURNO 2'],
+        'turno_offset': {'TURNO 1':3,'TURNO 2':4},
+        'linhas_por_dia': 9,
+        'row_bruto': 5, 'row_liq': 6,
+    },
     'PHAB': {
         'col_map': {'AMEX':2,'HIPER':3,'MASTER CREDITO':4,'MASTER DEBITO':5,'VISA CREDITO':6,'ELO CREDITO':7,'VISA DEBITO':8,'ELO DEBITO':9,'PIX':12},
         'taxas': {2:0.0210,3:0.0249,4:0.0185,5:0.0078,6:0.0173,7:0.0142,8:0.0078,9:0.0082,12:0.0074},
