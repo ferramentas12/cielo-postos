@@ -379,8 +379,10 @@ def preencher():
                     if valor > 0:
                         valores[f'{get_column_letter(col_map[col_name])}{row}'] = round(valor, 2)
 
+        # Fórmulas de líquido: só nos dias que foram processados agora.
+        # Dias anteriores ficam com a taxa que já tinham (se a Cielo mudar a taxa, o histórico não muda).
         formulas = {}
-        for d in range(1, 32):
+        for d in sorted(matriz.keys()):
             base_d = (d - 1) * linhas_por_dia
             r_liq = base_d + row_liq
             r_bruto = base_d + row_bruto
