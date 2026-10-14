@@ -158,6 +158,26 @@ const DOIS_TURNOS=[3,4]; // índices de postos com só 2 turnos
 let modo=1;
 let arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
 
+// Dia padrão = ontem (modo 1 dia) ou sexta/sábado/domingo anteriores (modo 3 dias)
+function diaPadrao(i,n){
+  const dt=new Date(); dt.setDate(dt.getDate()-n+i);
+  return dt.getDate();
+}
+
+// Seleciona automaticamente a aba do mês de ontem (ex: OUTUBRO26)
+function selecionaMesAtual(){
+  const MESES=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  const dt=new Date(); dt.setDate(dt.getDate()-1);
+  const m=MESES[dt.getMonth()], yy=String(dt.getFullYear()).slice(2), yyyy=String(dt.getFullYear());
+  const cands=[m+yy, m+' '+yyyy, m.replace('Ç','C')+' '+yyyy, m];
+  for(let p=0;p<5;p++){
+    const sel=document.getElementById('aba-'+p); if(!sel) continue;
+    const opts=[...sel.options].map(o=>o.value);
+    const achou=cands.find(c=>opts.includes(c));
+    if(achou) sel.value=achou;
+  }
+}
+
 function setModo(n,btn){
   modo=n;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -190,7 +210,7 @@ function renderDias(p){
 
   for(let i=0;i<modoEfetivo;i++){
     const l=modoEfetivo===3?LABELS3[i]:'Dia';
-    const d=i===0?13:i===1?14:15;
+    const d=diaPadrao(i,modoEfetivo);
     const pid=p+'-'+i;
 
     let turnosHtml;
@@ -257,6 +277,14 @@ async function processar(){
       const modoEfetivo=modo;
       const dias=[];
 
+      // Confere se todos os horários estão preenchidos antes de enviar
+      const vazio=[...document.querySelectorAll('#dias-'+p+' input')].find(inp=>!inp.value);
+      if(vazio){
+        mostrarErro('Erro no '+NOMES[p]+': tem um horário ou dia vazio/incompleto. Preencha hora E minuto em todos os campos.');
+        vazio.style.borderColor='var(--red)'; vazio.focus();
+        continue;
+      }
+
       for(let i=0;i<modoEfetivo;i++){
         const pid=p+'-'+i;
         dias.push({
@@ -278,10 +306,19 @@ async function processar(){
         const a=document.createElement('a');
         a.href=url;a.download=NOMES[p]+'_'+aba+'_atualizado.xlsx';
         a.click();URL.revokeObjectURL(url);
-        document.getElementById('resultado-conteudo').innerHTML+=`<div class="result-section"><div class="result-posto-title">✓ ${NOMES[p]} — ${aba} — planilha baixada!</div></div>`;
+        let avisosHtml='';
+        const av=r.headers.get('X-Avisos');
+        if(av){
+          try{
+            const lista=JSON.parse(decodeURIComponent(av));
+            avisosHtml=`<div style="font-size:0.7rem;color:var(--yellow);font-family:'IBM Plex Mono',monospace;padding:6px 12px;line-height:1.7;">⚠ ${lista.join('<br>⚠ ')}</div>`;
+          }catch(_){}
+        }
+        document.getElementById('resultado-conteudo').innerHTML+=`<div class="result-section"><div class="result-posto-title">✓ ${NOMES[p]} — ${aba} — planilha baixada!</div>${avisosHtml}</div>`;
       } else {
-        const e=await r.json();
-        mostrarErro('Erro no '+NOMES[p]+': '+(e.erro||'desconhecido'));
+        let msg='o servidor não respondeu direito (código '+r.status+'). Se o site acabou de acordar, tente de novo em 1 minuto.';
+        try{ const e=await r.json(); if(e.erro) msg=e.erro; }catch(_){}
+        mostrarErro('Erro no '+NOMES[p]+': '+msg);
       }
     }
 
@@ -306,7 +343,7 @@ function limpar(){
     document.getElementById('fn-c-'+p).textContent='Selecionar .xlsx de cartões...';
     document.getElementById('fn-p-'+p).textContent='Selecionar .xlsx de Pix...';
   });
-  arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
+  arqs=[[null,null,null],[null,null,null],[null,null,null],[null,null,null],[null,null,null]];
   document.getElementById('erro').style.display='none';
   document.getElementById('success').style.display='none';
   document.getElementById('resultado-conteudo').innerHTML='';
@@ -315,6 +352,8 @@ function limpar(){
 function mostrarErro(m){const e=document.getElementById('erro');e.textContent=m;e.style.display='block';}
 
 [0,1,2,3,4].forEach(renderDias);
+selecionaMesAtual();
 </script>
 </body>
 </html>
+
