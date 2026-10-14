@@ -53,8 +53,30 @@ POSTO_CONFIGS = {
 }
 
 def to_min(s):
-    h, m = map(int, s.split(':'))
+    h, m = map(int, str(s).strip().split(':')[:2])
     return h * 60 + m
+
+NOMES_CAMPOS = {
+    't3af': 'T3 anterior — fechou às', 't1i': 'Turno 1 (início)', 't1f': 'Turno 1 (até)',
+    't2i': 'Turno 2 (início)', 't2f': 'Turno 2 (até)', 't3i': 'Turno 3 — abre às',
+}
+
+def valida_horarios(dias_config, turnos):
+    campos = ['t3af', 't1i', 't1f', 't2i', 't2f', 't3i'] if 'T3 DIA ANTERIOR' in turnos else ['t1i', 't1f', 't2i', 't2f']
+    for d in dias_config:
+        if not isinstance(d.get('dia'), int) or not 1 <= d['dia'] <= 31:
+            return 'Preencha o "Dia do mês" (1 a 31).'
+        t = d.get('turnos', {})
+        for c in campos:
+            v = str(t.get(c) or '').strip()
+            if not re.match(r'^\d{1,2}:\d{2}', v):
+                return f'Dia {d["dia"]}: o horário "{NOMES_CAMPOS[c]}" está vazio ou incompleto. Preencha hora E minuto.'
+        m = {c: to_min(t[c]) for c in campos}
+        pares = [('t3af', 't1f'), ('t1i', 't1f'), ('t1f', 't2f'), ('t2i', 't2f'), ('t2f', 't3i')] if 'T3 DIA ANTERIOR' in turnos else [('t1i', 't1f'), ('t1f', 't2f'), ('t2i', 't2f')]
+        for a, b in pares:
+            if m[a] > m[b]:
+                return f'Dia {d["dia"]}: "{NOMES_CAMPOS[a]}" ({t[a]}) está depois de "{NOMES_CAMPOS[b]}" ({t[b]}). Confira os horários.'
+    return None
 
 def parse_hora(val):
     s = str(val).strip()
@@ -87,15 +109,26 @@ def parse_data_dia(val):
     return None
 
 def classifica_turno(min_val, turnos_config, t3af=None, t1i=None, t1f=None, t2i=None, t2f=None, t3i=None):
-    if 'T3 DIA ANTERIOR' in turnos_config and t3af and min_val <= t3af:
-        return 'T3 DIA ANTERIOR'
-    if t1i and t1f and t1i <= min_val <= t1f:
-        return 'TURNO 1'
-    if t2i and t2f and t2i <= min_val <= t2f:
-        return 'TURNO 2'
-    if 'TURNO 3' in turnos_config and t3i and min_val >= t3i:
+    # Postos com 4 turnos: cada turno vai do FECHAMENTO do anterior até o seu fechamento.
+    # Assim nenhuma venda que caia no intervalo entre fechar um turno e abrir o próximo se perde
+    # (ela entra no turno que está abrindo).
+    if 'T3 DIA ANTERIOR' in turnos_config:
+        if min_val <= t3af:
+            return 'T3 DIA ANTERIOR'
+        if min_val <= t1f:
+            return 'TURNO 1'
+        if min_val <= t2f:
+            return 'TURNO 2'
         return 'TURNO 3'
+    # Postos com 2 turnos (PHAB / ALADAH)
+    if t1i <= min_val <= t1f:
+        return 'TURNO 1'
+    if t1f < min_val <= t2f:
+        return 'TURNO 2'
     return None
+
+def fmt_min(m):
+    return f'{m // 60:02d}:{m % 60:02d}'
 
 def map_bandeira(band, forma):
     b = band.lower()
@@ -155,6 +188,12 @@ def preencher():
         row_bruto = cfg['row_bruto']
         row_liq = cfg['row_liq']
 
+        erro_h = valida_horarios(dias_config, turnos)
+        if erro_h:
+            return jsonify({'erro': erro_h}), 400
+
+        avisos = []
+
         from collections import defaultdict
         matriz = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
@@ -190,15 +229,15 @@ def preencher():
                 if not cfg_dia:
                     continue
                 t = cfg_dia['turnos']
-                turno = classifica_turno(
-                    min_val, turnos,
-                    t3af=to_min(t['t3af']) if t.get('t3af') else None,
-                    t1i=to_min(t['t1i']), t1f=to_min(t['t1f']),
-                    t2i=to_min(t['t2i']), t2f=to_min(t['t2f']),
-                    t3i=to_min(t['t3i']) if t.get('t3i') else None,
-                )
+                tm = {k: to_min(v) for k, v in t.items() if v}
+                turno = classifica_turno(min_val, turnos, **tm)
                 if not turno:
+                    avisos.append(f'Dia {dia_tx} {fmt_min(min_val)}: venda de R$ {valor:.2f} fora dos turnos (não lançada)'.replace('.', ','))
                     continue
+                if 'T3 DIA ANTERIOR' in turnos:
+                    ini = {'TURNO 1': tm.get('t1i'), 'TURNO 2': tm.get('t2i'), 'TURNO 3': tm.get('t3i')}.get(turno)
+                    if ini is not None and min_val < ini:
+                        avisos.append(f'Dia {dia_tx} {fmt_min(min_val)} — R$ {valor:.2f} — sem caixa aberto → lançada no {turno}. Confira se foi registrada manualmente.'.replace('.', ',').replace(', Confira', '. Confira').replace('manualmente,', 'manualmente.'))
                 coluna = 'PIX' if tipo == 'pix' else map_bandeira(str(row[h['band']] or ''), str(row[h['forma']] or ''))
                 if coluna and coluna in col_map:
                     matriz[dia_tx][turno][coluna] += valor
@@ -240,9 +279,14 @@ def preencher():
         dias_str = '_'.join(str(d['dia']) for d in dias_config)
         nome_arquivo = f"{posto}_{aba}_DIAS{dias_str}.xlsx"
 
-        return send_file(output,
+        resp = send_file(output,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True, download_name=nome_arquivo)
+        if avisos:
+            from urllib.parse import quote
+            resp.headers['X-Avisos'] = quote(json.dumps(avisos[:30], ensure_ascii=False))
+            resp.headers['Access-Control-Expose-Headers'] = 'X-Avisos'
+        return resp
 
     except Exception as e:
         import traceback
