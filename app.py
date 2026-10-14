@@ -2,6 +2,8 @@ from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 import openpyxl
 import io
+import zipfile
+from openpyxl.utils import get_column_letter
 import json
 import re
 from datetime import date, timedelta
@@ -156,6 +158,121 @@ def encontra_header(rows):
             }
     return None
 
+# ---------------------------------------------------------------------------
+# Gravação direta no XML da aba (rápida): só a aba do mês é alterada, o resto do
+# arquivo é copiado byte a byte. Evita abrir/regravar a planilha inteira, que com
+# muitas abas estoura o tempo limite do servidor grátis.
+# ---------------------------------------------------------------------------
+def _caminho_aba(zf, aba):
+    wb_xml = zf.read('xl/workbook.xml').decode('utf-8')
+    rels = zf.read('xl/_rels/workbook.xml.rels').decode('utf-8')
+    rid = None
+    for m in re.finditer(r'<sheet\b[^>]*>', wb_xml):
+        tag = m.group(0)
+        nm = re.search(r'name="([^"]*)"', tag)
+        if nm and _xml_unescape(nm.group(1)) == aba:
+            rid = re.search(r'r:id="([^"]*)"', tag).group(1)
+            break
+    if not rid:
+        return None
+    for m in re.finditer(r'<Relationship\b[^>]*>', rels):
+        tag = m.group(0)
+        if f'Id="{rid}"' in tag:
+            alvo = re.search(r'Target="([^"]*)"', tag).group(1)
+            alvo = alvo.lstrip('/')
+            return alvo if alvo.startswith('xl/') else 'xl/' + alvo
+    return None
+
+def _xml_unescape(t):
+    return t.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"').replace('&apos;', "'").replace('&amp;', '&')
+
+def _col_num(ref):
+    letras = re.match(r'[A-Z]+', ref).group(0)
+    n = 0
+    for ch in letras:
+        n = n * 26 + ord(ch) - 64
+    return n
+
+_RE_CELL = r'<c r="{ref}"(?:\s[^>]*?)?(?:/>|>.*?</c>)'
+
+def _set_cell(xml, ref, valor=None, formula=None):
+    """Grava número (valor) ou fórmula na célula, mantendo o estilo (s=)."""
+    m = re.search(_RE_CELL.format(ref=ref), xml, flags=re.S)
+    estilo = ''
+    if m:
+        old = m.group(0)
+        if formula is not None:
+            fm = re.search(r'<f(?:\s[^>]*)?>(.*?)</f>', old, flags=re.S)
+            if fm and 't="shared"' not in old and _xml_unescape(fm.group(1)) == formula:
+                return xml  # fórmula já está certa
+            if 't="shared"' in old:
+                return xml  # não mexe em fórmula compartilhada
+        sm = re.search(r'\ss="(\d+)"', old[:old.find('>') + 1])
+        if sm:
+            estilo = f' s="{sm.group(1)}"'
+    if formula is not None:
+        f_esc = formula.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        novo = f'<c r="{ref}"{estilo}><f>{f_esc}</f></c>'
+    else:
+        novo = f'<c r="{ref}"{estilo}><v>{repr(float(valor)) if valor % 1 else int(valor)}</v></c>'
+    if m:
+        return xml[:m.start()] + novo + xml[m.end():]
+    # célula não existe: insere na linha, na posição da coluna
+    row_num = re.match(r'[A-Z]+(\d+)', ref).group(1)
+    rm = re.search(rf'<row r="{row_num}"(?:\s[^>]*?)?(?:/>|>.*?</row>)', xml, flags=re.S)
+    if not rm:
+        raise ValueError(f'Linha {row_num} não encontrada na aba')
+    row_xml = rm.group(0)
+    if row_xml.endswith('/>'):
+        row_novo = row_xml[:-2] + '>' + novo + '</row>'
+    else:
+        alvo_col = _col_num(ref)
+        pos = len(row_xml) - len('</row>')
+        for cm in re.finditer(r'<c r="([A-Z]+)\d+"', row_xml):
+            if _col_num(cm.group(1)) > alvo_col:
+                pos = cm.start()
+                break
+        row_novo = row_xml[:pos] + novo + row_xml[pos:]
+    return xml[:rm.start()] + row_novo + xml[rm.end():]
+
+def grava_xlsx_rapido(arquivo_bytes, aba, valores, formulas):
+    """valores: {ref: numero}; formulas: {ref: 'B7-(B7*0.021)'}"""
+    zin = zipfile.ZipFile(io.BytesIO(arquivo_bytes))
+    caminho = _caminho_aba(zin, aba)
+    if not caminho:
+        return None
+    xml = zin.read(caminho).decode('utf-8')
+    for ref, v in valores.items():
+        xml = _set_cell(xml, ref, valor=v)
+    for ref, f in formulas.items():
+        xml = _set_cell(xml, ref, formula=f)
+    # apaga os resultados guardados das fórmulas desta aba -> Excel/LibreOffice recalculam ao abrir
+    xml = re.sub(r'(</f>|<f\b[^>]*/>)<v>[^<]*</v>', r'\1', xml)
+    xml = re.sub(r'(<c\b[^>]*?)\st="(?:str|e|b)"([^>]*>(?:<f\b[^>]*/>|<f\b[^>]*>.*?</f>)</c>)', r'\1\2', xml)
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            nome = item.filename
+            if nome == 'xl/calcChain.xml':
+                continue  # o Excel recria sozinho
+            dados = zin.read(nome)
+            if nome == caminho:
+                dados = xml.encode('utf-8')
+            elif nome == 'xl/workbook.xml':
+                w = dados.decode('utf-8')
+                if '<calcPr' in w:
+                    w = re.sub(r'<calcPr\b([^>]*?)/?>', lambda m: '<calcPr' + re.sub(r'\sfullCalcOnLoad="[^"]*"', '', m.group(1)).rstrip('/') + ' fullCalcOnLoad="1"/>', w, count=1)
+                else:
+                    w = w.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>')
+                dados = w.encode('utf-8')
+            elif nome == 'xl/_rels/workbook.xml.rels':
+                dados = re.sub(r'<Relationship\b[^>]*calcChain[^>]*/>', '', dados.decode('utf-8')).encode('utf-8')
+            elif nome == '[Content_Types].xml':
+                dados = re.sub(r'<Override\b[^>]*calcChain[^>]*/>', '', dados.decode('utf-8')).encode('utf-8')
+            zout.writestr(item, dados)
+    out.seek(0)
+    return out
+
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
@@ -245,36 +362,40 @@ def preencher():
         processar_arquivo(cartoes, 'cartoes')
         processar_arquivo(pix, 'pix')
 
-        wb = openpyxl.load_workbook(planilha)
-        if aba not in wb.sheetnames:
-            return jsonify({'erro': f'Aba "{aba}" nao encontrada. Abas disponiveis: {", ".join(wb.sheetnames)}'}), 400
-        ws = wb[aba]
-
+        # Monta as células a gravar
+        valores = {}
         for dia_tx, turnos_dia in matriz.items():
             base = (dia_tx - 1) * linhas_por_dia
+            # zera TODOS os turnos do dia (evita sobrar valor de uma rodada anterior)
+            for turno in turnos:
+                row = base + turno_offset[turno]
+                for col_idx in col_map.values():
+                    valores[f'{get_column_letter(col_idx)}{row}'] = 0
             for turno, colunas in turnos_dia.items():
                 if turno not in turno_offset:
                     continue
                 row = base + turno_offset[turno]
-                # Zerar todas as colunas primeiro para não manter valores antigos
-                for col_idx in col_map.values():
-                    ws.cell(row=row, column=col_idx).value = 0
-                # Preencher com valores calculados
                 for col_name, valor in colunas.items():
                     if valor > 0:
-                        ws.cell(row=row, column=col_map[col_name]).value = round(valor, 2)
+                        valores[f'{get_column_letter(col_map[col_name])}{row}'] = round(valor, 2)
 
+        formulas = {}
         for d in range(1, 32):
             base_d = (d - 1) * linhas_por_dia
             r_liq = base_d + row_liq
             r_bruto = base_d + row_bruto
             for col_idx, taxa in taxas.items():
-                bruto_ref = ws.cell(row=r_bruto, column=col_idx).coordinate
-                ws.cell(row=r_liq, column=col_idx).value = f'={bruto_ref}-({bruto_ref}*{taxa})'
+                L = get_column_letter(col_idx)
+                formulas[f'{L}{r_liq}'] = f'{L}{r_bruto}-({L}{r_bruto}*{taxa})'
 
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
+        planilha_bytes = planilha.read()
+        try:
+            output = grava_xlsx_rapido(planilha_bytes, aba, valores, formulas)
+        except zipfile.BadZipFile:
+            return jsonify({'erro': 'A planilha mensal não é um arquivo .xlsx válido.'}), 400
+        if output is None:
+            nomes = re.findall(r'<sheet\b[^>]*name="([^"]*)"', zipfile.ZipFile(io.BytesIO(planilha_bytes)).read('xl/workbook.xml').decode('utf-8'))
+            return jsonify({'erro': f'Aba "{aba}" nao encontrada. Abas disponiveis: {", ".join(_xml_unescape(n) for n in nomes)}'}), 400
 
         dias_str = '_'.join(str(d['dia']) for d in dias_config)
         nome_arquivo = f"{posto}_{aba}_DIAS{dias_str}.xlsx"
@@ -294,3 +415,4 @@ def preencher():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
